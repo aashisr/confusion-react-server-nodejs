@@ -10,6 +10,24 @@ var dishRouter = require('./routes/dishRouter');
 var promoRouter = require('./routes/promoRouter');
 var leaderRouter = require('./routes/leaderRouter');
 
+//Mongoose helps to impose a structure on the documents that is going to be stored in the database collection
+const mongoose = require('mongoose');
+//import the dishes schema from model folder
+const Dishes = require('./models/dishes');
+
+//url to connect to mongodb => localhost, port and database name
+const url = 'mongodb://localhost:27017/conFusion';
+
+//Establish a connection with the database and store in connect variable
+//Since current URL string parser is deprecated, new URL parser is being used
+const connect = mongoose.connect(url, {useNewUrlParser: true});
+
+//Now, connect the database and do database operations
+connect.then((db) => {
+    console.log('Connected to the server');
+
+}, (err) => {console.log(err)}); //Console log the error
+
 var app = express();
 
 // view engine setup

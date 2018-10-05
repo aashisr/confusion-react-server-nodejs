@@ -1,9 +1,11 @@
 //File for handling all routes of 'dishes'
-//This is an mini express router, so we require all that was required in index.js
-
+//This is an mini express router, so we require all that was required in app.js
 const express = require('express');
-
 const bodyParser  = require('body-parser');
+const mongoose = require('mongoose');
+
+//Import dishes model and store in Dishes variable
+const Dishes = require('../models/dishes');
 
 //Declare dishRouter as express router
 const dishRouter = express.Router();
@@ -17,25 +19,31 @@ dishRouter.use(bodyParser.json());
 //since all methods will take route from the dishRouter.route
 
 dishRouter.route('/')
-
-//All the http methods will come here first and go to specific method by calling next()
-    .all((req, res, next) => {
-        res.statusCode = 200;
-        res.setHeader('Content-Type','text/plain');
-        //Call the next function so that it will continue to look for additional dishes endpoint
-        next();
-    })
     //GET request for dishes
-    //The modified parameters req, res are passed from the above 'all' method
     .get((req, res, next) => {
-        //The modified res objects are carried in to this function as well
-        //.end ends the handling of the current method i.e get in here
-        res.end('Getting all the dishes');
+        //Find all the dishes from the Dishes model i.e dishes collection in database
+        Dishes.find()
+            .then((dishes) => {
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json");
+                //Return the response as json
+                res.json(dishes);
+            }, (err) => next(err)) //sends the error to the error handler
+            .catch((err) => next(err));
     })
     //POST request for dishes
     .post((req, res, next) => {
-        //The modified res objects are carried in to this function as well
-        res.end('Add dish: ' + req.body.name + ' with details: ' + req.body.description);
+        //Post the parsed request to the Dishes model i.e dishes collection
+        //req.body is already parsed by bodyParser
+        Dishes.create(req.body)
+            .then((dish) => {
+                console.log('Dish created \n', dish);
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json");
+                //Return the response as json
+                res.json(dish);
+            }, (err) => next(err))
+            .catch((err) => next(err));
     })
     //PUT request for dishes
     .put((req, res, next) => {
@@ -45,14 +53,29 @@ dishRouter.route('/')
     })
     //DELETE request for dishes
     .delete((req, res, next) => {
-        res.end('Deleting all the dishes');
+        //Delete all the dishes from dishes collection
+        Dishes.remove()
+            .then((response) => {
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json");
+                //Return the response which is a deleted object as json
+                res.json(response);
+            }, (err) => next(err))
+            .catch((err) => next(err));
     });
 
 
 //ROUTE FOR /dishes/:dishId
 dishRouter.route('/:dishId')
     .get((req, res, next) => {
-        res.end('Get the details of dish ' + req.params.dishId);
+        //Find the dish by id and return the found dish
+        Dishes.findById(req.params.dishId)
+            .then((dish) => {
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json");
+                res.json(dish);
+            }, (err) => next(err))
+            .catch((err) => next(err));
     })
     .post((req, res, next) => {
         //POST not supported for this one
@@ -61,12 +84,29 @@ dishRouter.route('/:dishId')
         res.end('POST operation forbidden on /dishes/' + req.params.dishId);
     })
     .put((req, res, next) => {
-        //res.write adds line to the reply message
-        res.write('Updating the dish: ' + req.params.dishId + '\n');
-        res.end('Update dish: ' + req.body.name + ' with details '+ req.body.description);
+        //Find the dish by id and update that dish
+        Dishes.findByIdAndUpdate(req.params.dishId, {
+            //$set takes the new object to be updated
+            //Here, new object is the object sent in the body with PUT request
+            $set : req.body
+            }, { new: true }) //new: true is to return the updated dish
+            .then((dish) => {
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json");
+                res.json(dish);
+            }, (err) => next(err))
+            .catch((err) => next(err));
     })
     .delete((req, res, next) => {
-        res.end('Deleting dish: ' + req.params.dishId);
+        //Find the dish by id and remove
+        Dishes.findByIdAndRemove(req.params.dishId)
+            .then((response) => {
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json");
+                //Return the response which is a deleted object as json
+                res.json(response);
+            }, (err) => next(err))
+            .catch((err) => next(err));
     });
 
 //Export this route as a module
