@@ -34,10 +34,68 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+//Below are middlewares which work from top to bottom in an application
+//The request goes to the first middleware and then to second and so on
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+
+//Function to check for authorization
+function auth(req, res, next){
+    console.log(req.headers);
+
+    //Get the authorization header
+    // Example of basic authorization header: Basic YWRtaW46cGFzc3dvcmQ=
+    //Second part is the base64 encoding of 'username:password'
+    var authHeader = req.headers.authorization;
+
+    //If no authentication header
+    if (!authHeader) {
+        //Ask the user to authenticate
+        //Create a error and send to next(err)
+        var err = new Error('You are not authenticated.');
+        //Set the header to response message
+        res.setHeader('WWW-Authenticate', 'Basic');
+        err.status = 401;
+        //Skip all other middlewares and go directly to error handler
+        next(err);
+    }
+
+    //If authHeader exists, get the username and password
+    //split the authHeader with space and get the latter part by removing Basic and decode the base64 value to string using buffer
+    //authHeader is now in format 'username:password'
+    //Again split that string with ':'
+    var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
+
+    //Get the username and password
+    var username = auth[0];
+    var password = auth[1];
+
+    //Check for the username and password
+    if (username === 'admin' && password === 'password'){
+        //Allow the client request to pass to next middleware
+        //express matches the specific request to specific middleware
+        next();
+    } else {
+        //Username and password does not match, Ask the user to authenticate again
+        //Create a error and send to next(err)
+        var err = new Error('You are not authenticated.');
+        //Set the header to response message
+        res.setHeader('WWW-Authenticate', 'Basic');
+        err.status = 401;
+        //Skip all other middlewares and go directly to error handler
+        next(err);
+    }
+
+}
+
+//Add the authentication middleware here
+//So the app needs to go through the authentication to use the middlewares below
+app.use(auth);
+
+//express.static middleware serves static data from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
