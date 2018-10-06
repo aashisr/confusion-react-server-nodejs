@@ -1,7 +1,9 @@
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
+//Cookie parser sets the cookies
 var cookieParser = require('cookie-parser');
+//Logger logs the request information in console (terminal) where npm start is done
 var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
@@ -39,54 +41,80 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+//Parse cookies sent from the client side in the request message and add to the request header
+//Parameter is the secret-key required for a signed cookie
+app.use(cookieParser('12345-67890'));
 
 
 //Function to check for authorization
 function auth(req, res, next){
-    console.log(req.headers);
+    console.log(req.signedCookies);
 
-    //Get the authorization header
-    // Example of basic authorization header: Basic YWRtaW46cGFzc3dvcmQ=
-    //Second part is the base64 encoding of 'username:password'
-    var authHeader = req.headers.authorization;
+    //If the incoming request does not include the user field in the signed cookies, then the user is not authorized yet
+    if (!req.signedCookies.user){  //So, authenticate the user
+        //Get the authorization header
+        // Example of basic authorization header: Basic YWRtaW46cGFzc3dvcmQ=
+        //Second part is the base64 encoding of 'username:password'
+        var authHeader = req.headers.authorization;
 
-    //If no authentication header
-    if (!authHeader) {
-        //Ask the user to authenticate
-        //Create a error and send to next(err)
-        var err = new Error('You are not authenticated.');
-        //Set the header to response message
-        res.setHeader('WWW-Authenticate', 'Basic');
-        err.status = 401;
-        //Skip all other middlewares and go directly to error handler
-        next(err);
-    }
+        //If no authentication header
+        if (!authHeader) {
+            //Ask the user to authenticate
+            //Create a error and send to next(err)
+            var err = new Error('You are not authenticated.');
+            //Set the header to response message
+            res.setHeader('WWW-Authenticate', 'Basic');
+            err.status = 401;
+            //Skip all other middlewares and go directly to error handler
+            next(err);
+        }
 
-    //If authHeader exists, get the username and password
-    //split the authHeader with space and get the latter part by removing Basic and decode the base64 value to string using buffer
-    //authHeader is now in format 'username:password'
-    //Again split that string with ':'
-    var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
+        //If authHeader exists, get the username and password
+        //split the authHeader with space and get the latter part by removing Basic and decode the base64 value to string using buffer
+        //authHeader is now in format 'username:password'
+        //Again split that string with ':'
+        //.from included in new node versions to deal with security issues
+        var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
 
-    //Get the username and password
-    var username = auth[0];
-    var password = auth[1];
+        //Get the username and password
+        var username = auth[0];
+        var password = auth[1];
 
-    //Check for the username and password
-    if (username === 'admin' && password === 'password'){
-        //Allow the client request to pass to next middleware
-        //express matches the specific request to specific middleware
-        next();
+        //Check for the username and password
+        if (username === 'admin' && password === 'password') {
+            //Set up the cookie here and send to client as response
+            //PARAMETERS
+            //user - name of the cookie
+            //admin - user field (value for the user)
+            //Set the signed to true to indicate it is a signed cookie
+            res.cookie('user', 'admin', { signed : true });
+
+            //Allow the client request to pass to next middleware
+            //express matches the specific request to specific middleware
+            next();
+        } else {
+            //Username and password does not match, Ask the user to authenticate again
+            //Create a error and send to next(err)
+            var err = new Error('You are not authenticated.');
+            //Set the header to response message
+            res.setHeader('WWW-Authenticate', 'Basic');
+            err.status = 401;
+            //Skip all other middlewares and go directly to error handler
+            next(err);
+        }
     } else {
-        //Username and password does not match, Ask the user to authenticate again
-        //Create a error and send to next(err)
-        var err = new Error('You are not authenticated.');
-        //Set the header to response message
-        res.setHeader('WWW-Authenticate', 'Basic');
-        err.status = 401;
-        //Skip all other middlewares and go directly to error handler
-        next(err);
+        //Signed cookie already exists and user property is defined
+        if (req.signedCookies.user === 'admin') { //If the signed cookie contains the correct value
+            //Allow the request to pass to next middleware
+            next();
+        } else { //This does not happen since if there is a cookie for the request, it should have the correct value
+            //Cookie is not valid, so send the error response
+            var err = new Error('You are not authenticated.');
+            //Do not ask again for the authentication
+            //res.setHeader('WWW-Authenticate', 'Basic');
+            err.status = 401;
+            next(err);
+        }
     }
 
 }
