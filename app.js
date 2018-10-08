@@ -57,65 +57,30 @@ app.use(session({
     store: new FileStore()  //Store the session in FileStore
 }));
 
+//let the user access the index, sign up and login routes before authorization
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+
 //Function to check for authorization
 function auth(req, res, next){
     console.log(req.session);
 
-    //If the incoming request does not include the session, then the user is not authorized yet
-    if (!req.session.user){  //So, authenticate the user
-        //Get the authorization header
-        // Example of basic authorization header: Basic YWRtaW46cGFzc3dvcmQ=
-        //Second part is the base64 encoding of 'username:password'
-        var authHeader = req.headers.authorization;
+    //User should not be able to come in here without logging in
+    if (!req.session.user){  //So, if they are here, display error message
 
-        //If no authentication header
-        if (!authHeader) {
-            //Ask the user to authenticate
-            //Create a error and send to next(err)
-            var err = new Error('You are not authenticated.');
-            //Set the header to response message
-            res.setHeader('WWW-Authenticate', 'Basic');
-            err.status = 401;
-            //Skip all other middlewares and go directly to error handler
-            next(err);
-        }
+        //Create a error and send to next(err)
+        var err = new Error('You are not authenticated.');
+        err.status = 401;
+        //Skip all other middlewares and go directly to error handler
+        next(err);
 
-        //If authHeader exists, get the username and password
-        //split the authHeader with space and get the latter part by removing Basic and decode the base64 value to string using buffer
-        //authHeader is now in format 'username:password'
-        //Again split that string with ':'
-        //.from included in new node versions to deal with security issues
-        var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-
-        //Get the username and password
-        var username = auth[0];
-        var password = auth[1];
-
-        //Check for the username and password
-        if (username === 'admin' && password === 'password') {
-            //Set up the user property on req.session to admin
-            req.session.user = 'admin';
-
-            //Allow the client request to pass to next middleware
-            //express matches the specific request to specific middleware
-            next();
-        } else {
-            //Username and password does not match, Ask the user to authenticate again
-            //Create a error and send to next(err)
-            var err = new Error('You are not authenticated.');
-            //Set the header to response message
-            res.setHeader('WWW-Authenticate', 'Basic');
-            err.status = 401;
-            //Skip all other middlewares and go directly to error handler
-            next(err);
-        }
     } else {
         //Session already exists and user property is defined
-        if (req.session.user === 'admin') { //If the session user is admin
+        if (req.session.user === 'authenticated') { //If the session user is authenticated which was set in /login
             //Allow the request to pass to next middleware
             next();
-        } else { //This does not happen since if there is a cookie for the request, it should have the correct value
-            //Cookie is not valid, so send the error response
+        } else { //This does not happen since if there is a session for the request, it should have the correct value
+            //Session is not valid, so send the error response
             var err = new Error('You are not authenticated.');
             //Do not ask again for the authentication
             //res.setHeader('WWW-Authenticate', 'Basic');
@@ -133,8 +98,6 @@ app.use(auth);
 //express.static middleware serves static data from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 //Mount the imported routers to respective routes
 app.use('/dishes', dishRouter);
 app.use('/promotions', promoRouter);
