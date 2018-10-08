@@ -5,6 +5,9 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 //Logger logs the request information in console (terminal) where npm start is done
 var logger = require('morgan');
+//Require session and file store to store the sessions
+var session = require('express-session');
+var FileStore = require('session-file-store')(session);
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -43,15 +46,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //Parse cookies sent from the client side in the request message and add to the request header
 //Parameter is the secret-key required for a signed cookie
-app.use(cookieParser('12345-67890'));
+//app.use(cookieParser('12345-67890'));
 
+//Replace cookieParser with sessions
+app.use(session({
+    name: 'session-id', //Name of the session
+    secret: '12345-67890',
+    saveUninitialized: false,
+    resave: false,
+    store: new FileStore()  //Store the session in FileStore
+}));
 
 //Function to check for authorization
 function auth(req, res, next){
-    console.log(req.signedCookies);
+    console.log(req.session);
 
-    //If the incoming request does not include the user field in the signed cookies, then the user is not authorized yet
-    if (!req.signedCookies.user){  //So, authenticate the user
+    //If the incoming request does not include the session, then the user is not authorized yet
+    if (!req.session.user){  //So, authenticate the user
         //Get the authorization header
         // Example of basic authorization header: Basic YWRtaW46cGFzc3dvcmQ=
         //Second part is the base64 encoding of 'username:password'
@@ -82,12 +93,8 @@ function auth(req, res, next){
 
         //Check for the username and password
         if (username === 'admin' && password === 'password') {
-            //Set up the cookie here and send to client as response
-            //PARAMETERS
-            //user - name of the cookie
-            //admin - user field (value for the user)
-            //Set the signed to true to indicate it is a signed cookie
-            res.cookie('user', 'admin', { signed : true });
+            //Set up the user property on req.session to admin
+            req.session.user = 'admin';
 
             //Allow the client request to pass to next middleware
             //express matches the specific request to specific middleware
@@ -103,8 +110,8 @@ function auth(req, res, next){
             next(err);
         }
     } else {
-        //Signed cookie already exists and user property is defined
-        if (req.signedCookies.user === 'admin') { //If the signed cookie contains the correct value
+        //Session already exists and user property is defined
+        if (req.session.user === 'admin') { //If the session user is admin
             //Allow the request to pass to next middleware
             next();
         } else { //This does not happen since if there is a cookie for the request, it should have the correct value
