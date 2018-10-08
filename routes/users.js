@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var Users = require('../models/users');
 var passport = require('passport');
+var authenticate = require('../authenticate');
 
 var userRouter = express.Router();
 userRouter.use(bodyParser.json());
@@ -39,10 +40,16 @@ userRouter.post('/signup', (req, res, next) => {
 //Next function will be called only if the authentication is successful
 //If error in authentication, passport automatically sends back the reply message
 userRouter.post('/login', passport.authenticate('local') , (req, res) => {
+    //Authenticate the user with local strategy first and issue a token to the user
+
+    //Create a token with payload as id of the user
     //req.user contains the authenticated user
+    var token = authenticate.getToken({_id: req.user._id});
+
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.json({success: true, status: 'Successful login! '});
+    //pass this token back to the user which is extracted by the passport from body of the message when authenticating
+    res.json({success: true, token: token, status: 'Successful login! '});
 
 });
 

@@ -10,6 +10,7 @@ var session = require('express-session');
 var FileStore = require('session-file-store')(session);
 var passport = require('passport');
 var authenticate = require('./authenticate');
+var config = require('./config');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -22,8 +23,8 @@ const mongoose = require('mongoose');
 //import the dishes schema from model folder
 const Dishes = require('./models/dishes');
 
-//url to connect to mongodb => localhost, port and database name
-const url = 'mongodb://localhost:27017/conFusion';
+//url to connect to mongodb, imported from config.js
+const url = config.mongoUrl;
 
 //Establish a connection with the database and store in connect variable
 //Since current URL string parser is deprecated, new URL parser is being used
@@ -46,52 +47,13 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-//Parse cookies sent from the client side in the request message and add to the request header
-//Parameter is the secret-key required for a signed cookie
-//app.use(cookieParser('12345-67890'));
-
-//Replace cookieParser with sessions
-app.use(session({
-    name: 'session-id', //Name of the session
-    secret: '12345-67890',
-    saveUninitialized: false,
-    resave: false,
-    store: new FileStore()  //Store the session in FileStore
-}));
 
 //Initialize passport
 app.use(passport.initialize());
-//Automatically serializes the user information and store in session information
-app.use(passport.session());
 
 //let the user access the index, sign up and login routes before authorization
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
-//Function to check for authorization
-function auth(req, res, next){
-
-    //User should not be able to come in here without logging in
-    //req.user is loaded by the passport session after successful authentication
-    if (!req.user){  //So, if there is no req.user, display error message
-
-        //Create a error and send to next(err)
-        var err = new Error('You are not authenticated.');
-        err.status = 403;
-        //Skip all other middlewares and go directly to error handler
-        next(err);
-
-    } else {
-        //Authentication is successful, so proceed to other middlewares
-        next();
-
-    }
-
-}
-
-//Add the authentication middleware here
-//So the app needs to go through the authentication to use the middlewares below
-app.use(auth);
 
 //express.static middleware serves static data from public folder
 app.use(express.static(path.join(__dirname, 'public')));

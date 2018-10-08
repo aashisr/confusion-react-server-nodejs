@@ -3,6 +3,7 @@
 const express = require('express');
 const bodyParser  = require('body-parser');
 const mongoose = require('mongoose');
+const authenticate = require('../authenticate');
 
 //Import dishes model and store in Dishes variable
 const Dishes = require('../models/dishes');
@@ -19,7 +20,7 @@ dishRouter.use(bodyParser.json());
 //since all methods will take route from the dishRouter.route
 
 dishRouter.route('/')
-    //GET request for dishes
+    //GET request for dishes, open for all even without authentication
     .get((req, res, next) => {
         //Find all the dishes from the Dishes model i.e dishes collection in database
         Dishes.find()
@@ -31,8 +32,9 @@ dishRouter.route('/')
             }, (err) => next(err)) //sends the error to the error handler
             .catch((err) => next(err));
     })
-    //POST request for dishes
-    .post((req, res, next) => {
+    //POST request for dishes, user must be authenticated to use this route, verifyUser verifies if the user is logged in
+    //If verifyUser returns false, it is handled by passport
+    .post(authenticate.verifyUser, (req, res, next) => {
         //Post the parsed request to the Dishes model i.e dishes collection
         //req.body is already parsed by bodyParser
         Dishes.create(req.body)
@@ -46,13 +48,13 @@ dishRouter.route('/')
             .catch((err) => next(err));
     })
     //PUT request for dishes
-    .put((req, res, next) => {
+    .put(authenticate.verifyUser, (req, res, next) => {
         //Update the status code to 403
         res.statusCode = 403
         res.end('PUT operation forbidden on /dishes');
     })
     //DELETE request for dishes
-    .delete((req, res, next) => {
+    .delete(authenticate.verifyUser, (req, res, next) => {
         //Delete all the dishes from dishes collection
         Dishes.remove()
             .then((response) => {
@@ -77,13 +79,13 @@ dishRouter.route('/:dishId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .post((req, res, next) => {
+    .post(authenticate.verifyUser, (req, res, next) => {
         //POST not supported for this one
         //Update the status code to 403
         res.statusCode = 403
         res.end('POST operation forbidden on /dishes/' + req.params.dishId);
     })
-    .put((req, res, next) => {
+    .put(authenticate.verifyUser, (req, res, next) => {
         //Find the dish by id and update that dish
         Dishes.findByIdAndUpdate(req.params.dishId, {
             //$set takes the new object to be updated
@@ -97,7 +99,7 @@ dishRouter.route('/:dishId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .delete((req, res, next) => {
+    .delete(authenticate.verifyUser, (req, res, next) => {
         //Find the dish by id and remove
         Dishes.findByIdAndRemove(req.params.dishId)
             .then((response) => {
@@ -138,7 +140,7 @@ dishRouter.route('/:dishId/comments')
             .catch((err) => next(err));
     })
     //POST request for dish comments
-    .post((req, res, next) => {
+    .post(authenticate.verifyUser, (req, res, next) => {
         //Find the dish to post the comments to with the given id
         Dishes.findById(req.params.dishId)
             .then((dish) => {
@@ -168,13 +170,13 @@ dishRouter.route('/:dishId/comments')
             .catch((err) => next(err));
     })
     //PUT request for comments on a dish
-    .put((req, res, next) => {
+    .put(authenticate.verifyUser, (req, res, next) => {
         //Update the status code to 403
         res.statusCode = 403
         res.end('PUT operation forbidden on /dishes/' + req.params.dishId + '/comments');
     })
     //DELETE request for comments on a dish
-    .delete((req, res, next) => {
+    .delete(authenticate.verifyUser, (req, res, next) => {
         //Find the dish to delete the comments from with the given id
         Dishes.findById(req.params.dishId)
             .then((dish) => {
@@ -237,14 +239,14 @@ dishRouter.route('/:dishId/comments/:commentId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .post((req, res, next) => {
+    .post(authenticate.verifyUser, (req, res, next) => {
         //POST not supported for this one
         //Update the status code to 403
         res.statusCode = 403
         res.end('POST operation forbidden on /dishes/' + req.params.dishId +
                 '/comments/' + req.params.commentId);
     })
-    .put((req, res, next) => {
+    .put(authenticate.verifyUser, (req, res, next) => {
         //Find the dish
         Dishes.findById(req.params.dishId)
             .then((dish) => {
@@ -286,7 +288,7 @@ dishRouter.route('/:dishId/comments/:commentId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .delete((req, res, next) => {
+    .delete(authenticate.verifyUser, (req, res, next) => {
         //Find the dish
         Dishes.findById(req.params.dishId)
             .then((dish) => {
