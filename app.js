@@ -8,6 +8,8 @@ var logger = require('morgan');
 //Require session and file store to store the sessions
 var session = require('express-session');
 var FileStore = require('session-file-store')(session);
+var passport = require('passport');
+var authenticate = require('./authenticate');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -57,36 +59,32 @@ app.use(session({
     store: new FileStore()  //Store the session in FileStore
 }));
 
+//Initialize passport
+app.use(passport.initialize());
+//Automatically serializes the user information and store in session information
+app.use(passport.session());
+
 //let the user access the index, sign up and login routes before authorization
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
 //Function to check for authorization
 function auth(req, res, next){
-    console.log(req.session);
 
     //User should not be able to come in here without logging in
-    if (!req.session.user){  //So, if they are here, display error message
+    //req.user is loaded by the passport session after successful authentication
+    if (!req.user){  //So, if there is no req.user, display error message
 
         //Create a error and send to next(err)
         var err = new Error('You are not authenticated.');
-        err.status = 401;
+        err.status = 403;
         //Skip all other middlewares and go directly to error handler
         next(err);
 
     } else {
-        //Session already exists and user property is defined
-        if (req.session.user === 'authenticated') { //If the session user is authenticated which was set in /login
-            //Allow the request to pass to next middleware
-            next();
-        } else { //This does not happen since if there is a session for the request, it should have the correct value
-            //Session is not valid, so send the error response
-            var err = new Error('You are not authenticated.');
-            //Do not ask again for the authentication
-            //res.setHeader('WWW-Authenticate', 'Basic');
-            err.status = 401;
-            next(err);
-        }
+        //Authentication is successful, so proceed to other middlewares
+        next();
+
     }
 
 }
