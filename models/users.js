@@ -4,7 +4,15 @@ var passportLocalMongoose = require('passport-local-mongoose');
 
 var UserSchema = new Schema({
     //Username and hash passwords will be automatically added by passportLocalMongoose plugin
-    admin : { //By default , the new user created is not admin
+    firstName: {
+        type: String,
+        default: ''
+    },
+    lastName: {
+        type: String,
+        default: ''
+    },
+    admin : {
         type: Boolean,
         default: false
     }

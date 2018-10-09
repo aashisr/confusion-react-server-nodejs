@@ -24,13 +24,33 @@ userRouter.post('/signup', (req, res, next) => {
             res.setHeader('Content-Type', 'application/json');
             res.json({err: err});
         } else {
-            //Authenticate the registered user with passport to ensure successful registration
-            passport.authenticate('local')(req, res, () => {
-                //send back the reply to the client
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json({success: true, status: 'Registration successful! '});
+            //If the incoming request contains other user information, add them also
+            if (req.body.firstName){
+                //user is coming from passport module as 2nd parameter in above function
+                user.firstName = req.body.firstName;
+            }
+            if (req.body.lastName) {
+                user.lastName = req.body.lastName;
+            }
+
+            //Save the modification to the user
+            user.save((err, user) => {
+                if (err){
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json({err: err});
+                    return ;
+                }
+
+                //Authenticate the registered user with passport to ensure successful registration
+                passport.authenticate('local')(req, res, () => {
+                    //send back the reply to the client
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json({success: true, status: 'Registration successful! '});
+                });
             });
+
         }
     });
 });
