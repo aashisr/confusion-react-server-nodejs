@@ -22,8 +22,8 @@ passport.deserializeUser(Users.deserializeUser());
 
 //export these functions as well
 exports.getToken = function (user) {
-    //Create the token and return
-    //user is the payload for json web token
+    // generate a signed json web token with the contents of user object and return it in the response
+    //user is the payload for json web token and sends the user as jwt_payload
     return jwt.sign(user, config.secretKey, {expiresIn: 3600});
 };
 
@@ -41,6 +41,7 @@ exports.jwtPassport = passport.use(new JwtStrategy(opts, (jwt_payload, done) => 
     console.log('JWT payload: ', jwt_payload);
 
     //Search for user
+    //jwt_payload includes the user information that was sent in jwt.sign in getToken function
     Users.findOne({_id: jwt_payload._id}, (err, user) => {
         if (err){
             //done is callback that passport into our strategy
@@ -48,11 +49,11 @@ exports.jwtPassport = passport.use(new JwtStrategy(opts, (jwt_payload, done) => 
             return done(err, false);
         }
         else if (user) { //If user is not null
-            //null means ther is no error, user is the user returned from mongodb
+            //null means there is no error, user is the user returned from mongodb
             return done(null, user);
         }
         else {
-            //Retuen no error and user could not be found
+            //Return no error and user could not be found
             return done(null, false);
         }
     })
@@ -62,3 +63,16 @@ exports.jwtPassport = passport.use(new JwtStrategy(opts, (jwt_payload, done) => 
 //Passport authentication strategy is jwt strategy,
 //session false means do not create sessions since we are using token based authentication
 exports.verifyUser = passport.authenticate('jwt', {session: false});
+
+//Verifying admin
+exports.verifyAdmin = (req, res, next) => {
+
+    if (req.user.admin === true){
+        next();
+    } else {
+        var err = new Error('You must be an admin to perform this operation.');
+        err.status = 403;
+        next(err);
+    }
+
+};

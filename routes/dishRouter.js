@@ -36,7 +36,7 @@ dishRouter.route('/')
     })
     //POST request for dishes, user must be authenticated to use this route, verifyUser verifies if the user is logged in
     //If verifyUser returns false, it is handled by passport
-    .post(authenticate.verifyUser, (req, res, next) => {
+    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Post the parsed request to the Dishes model i.e dishes collection
         //req.body is already parsed by bodyParser
         Dishes.create(req.body)
@@ -50,13 +50,13 @@ dishRouter.route('/')
             .catch((err) => next(err));
     })
     //PUT request for dishes
-    .put(authenticate.verifyUser, (req, res, next) => {
+    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Update the status code to 403
         res.statusCode = 403
         res.end('PUT operation forbidden on /dishes');
     })
     //DELETE request for dishes
-    .delete(authenticate.verifyUser, (req, res, next) => {
+    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Delete all the dishes from dishes collection
         Dishes.remove()
             .then((response) => {
@@ -82,13 +82,13 @@ dishRouter.route('/:dishId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .post(authenticate.verifyUser, (req, res, next) => {
+    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //POST not supported for this one
         //Update the status code to 403
         res.statusCode = 403
         res.end('POST operation forbidden on /dishes/' + req.params.dishId);
     })
-    .put(authenticate.verifyUser, (req, res, next) => {
+    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Find the dish by id and update that dish
         Dishes.findByIdAndUpdate(req.params.dishId, {
             //$set takes the new object to be updated
@@ -102,7 +102,7 @@ dishRouter.route('/:dishId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .delete(authenticate.verifyUser, (req, res, next) => {
+    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Find the dish by id and remove
         Dishes.findByIdAndRemove(req.params.dishId)
             .then((response) => {
@@ -144,7 +144,7 @@ dishRouter.route('/:dishId/comments')
             .catch((err) => next(err));
     })
     //POST request for dish comments
-    .post(authenticate.verifyUser, (req, res, next) => {
+    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Find the dish to post the comments to with the given id
         Dishes.findById(req.params.dishId)
             .then((dish) => {
@@ -183,13 +183,13 @@ dishRouter.route('/:dishId/comments')
             .catch((err) => next(err));
     })
     //PUT request for comments on a dish
-    .put(authenticate.verifyUser, (req, res, next) => {
+    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Update the status code to 403
         res.statusCode = 403
         res.end('PUT operation forbidden on /dishes/' + req.params.dishId + '/comments');
     })
     //DELETE request for comments on a dish
-    .delete(authenticate.verifyUser, (req, res, next) => {
+    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         //Find the dish to delete the comments from with the given id
         Dishes.findById(req.params.dishId)
             .then((dish) => {
@@ -264,33 +264,47 @@ dishRouter.route('/:dishId/comments/:commentId')
         //Find the dish
         Dishes.findById(req.params.dishId)
             .then((dish) => {
+
                 //Check if the dish and comment both exists
                 if (dish !== null && dish.comments.id(req.params.commentId) !== null){
                     //Dish and comment exists
-                    //Only the rating or the comment can be updated
-                    if (req.body.rating){
-                        //If the request body has the rating property to update
-                        //Find the comment by comment id and update the rating
-                        dish.comments.id(req.params.commentId).rating = req.body.rating;
-                    }
-                    if (req.body.comment){
-                        //If the request body has the comment property to update
-                        //Find the comment by comment id and update the comment
-                        dish.comments.id(req.params.commentId).comment = req.body.comment;
-                    }
-                    //Save the dish
-                    dish.save()
-                        .then((dish) => {
-                            Dishes.findById(dish._id).populate('comments.author')
-                                .then((dish) => {
-                                    res.statusCode = 200;
-                                    res.setHeader("Content-Type", "application/json");
-                                    //Return the dish with updated comments as json
-                                    res.json(dish);
-                                })
 
-                        }, (err) => next(err))
-                        .catch((err) => next(err));
+                    //Check if the user editing is the author of this comment
+                    if ((req.user._id).equals(dish.comments.id(req.params.commentId).author)) {
+                        console.log('Yes author', dish.comments.id(req.params.commentId).author);
+                        //Only the rating or the comment can be updated
+                        if (req.body.rating) {
+                            //If the request body has the rating property to update
+                            //Find the comment by comment id and update the rating
+                            dish.comments.id(req.params.commentId).rating = req.body.rating;
+                        }
+                        if (req.body.comment) {
+                            //If the request body has the comment property to update
+                            //Find the comment by comment id and update the comment
+                            dish.comments.id(req.params.commentId).comment = req.body.comment;
+                        }
+                        //Save the dish
+                        dish.save()
+                            .then((dish) => {
+                                Dishes.findById(dish._id).populate('comments.author')
+                                    .then((dish) => {
+                                        res.statusCode = 200;
+                                        res.setHeader("Content-Type", "application/json");
+                                        //Return the dish with updated comments as json
+                                        res.json(dish);
+                                    })
+
+                            }, (err) => next(err))
+                            .catch((err) => next(err));
+                    }
+                    else {
+                        //User is not the one who posted the comment
+                        err = new Error('This is not your comment.');
+                        err.status = 403;
+                        return next(err);
+                    }
+
+
                 } else if (dish === null) {
                     //Dish does not exist
                     err = new Error('Dish ' + req.params.dishId + ' not found');
@@ -311,22 +325,34 @@ dishRouter.route('/:dishId/comments/:commentId')
         Dishes.findById(req.params.dishId)
             .then((dish) => {
                 if (dish !== null && dish.comments.id(req.params.commentId) !== null){
-                    //Remove the comment with given id
-                    dish.comments.id(req.params.commentId).remove();
+                    //Dish and comment exists
 
-                    //Save the dish
-                    dish.save()
-                        .then((dish) => {
-                            Dishes.findById(dish._id).populate('comments.author')
-                                .then((dish) => {
-                                    res.statusCode = 200;
-                                    res.setHeader("Content-Type", "application/json");
-                                    //Return the dish with the given comment deleted as json
-                                    res.json(dish);
-                                })
+                    //Check if the user editing is the author of this comment
+                    if ((req.user._id).equals(dish.comments.id(req.params.commentId).author)) {
+                        //Remove the comment with given id
+                        dish.comments.id(req.params.commentId).remove();
 
-                        }, (err) => next(err))
-                        .catch((err) => next(err));
+                        //Save the dish
+                        dish.save()
+                            .then((dish) => {
+                                Dishes.findById(dish._id).populate('comments.author')
+                                    .then((dish) => {
+                                        res.statusCode = 200;
+                                        res.setHeader("Content-Type", "application/json");
+                                        //Return the dish with the given comment deleted as json
+                                        res.json(dish);
+                                    })
+
+                            }, (err) => next(err))
+                            .catch((err) => next(err));
+                    }
+                    else {
+                        //User is not the one who posted the comment
+                        var err = new Error('This is not your comment');
+                        err.status = 403;
+                        next(err);
+                    }
+
                 } else if (dish === null) {
                     //Dish does not exist
                     err = new Error('Dish ' + req.params.dishId + ' not found');
