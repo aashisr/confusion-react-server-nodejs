@@ -38,6 +38,22 @@ connect.then((db) => {
 
 var app = express();
 
+//Redirect the request coming to http port to https port
+//Redirect for all the requests coming in, no matter the path
+app.all('*', (req, res, next) => {
+    //If incoming request is already a secure request
+    //If incoming request is secure, req object will have the secure property set to true
+    if (req.secure){
+        //No need to do anything
+        return next();
+    } else {
+        //Redirect to secure port
+        //Return status code is 307
+        //hostname is localhost, req.url is the actual path (routes)
+        res.redirect(307, 'https://' + req.hostname + ':' + app.get('secPort') + req.url);
+    }
+});
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');

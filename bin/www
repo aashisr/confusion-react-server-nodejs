@@ -7,13 +7,20 @@
 var app = require('../app');
 var debug = require('debug')('confusionserver-nodejs:server');
 var http = require('http');
+var https = require('https');
+//Import file system
+var fs = require('fs');
 
 /**
  * Get port from environment and store in Express.
  */
 
 var port = normalizePort(process.env.PORT || '3000');
+//Run http server at port 3000
 app.set('port', port);
+//Run https server at port 3443
+//Confugure the secure port number where https server will run, default port is 3000, run this in 3443
+app.set('secPort', port+443)
 
 /**
  * Create HTTP server.
@@ -28,6 +35,27 @@ var server = http.createServer(app);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+
+//Declare key and certificate needed for https server
+var options = {
+    //Read file synchronously
+    //__dirname gives the current directory of the file
+    key: fs.readFileSync(__dirname + '/private.key'),
+    cert: fs.readFileSync(__dirname + '/certificate.pem')
+};
+
+//Configure https server
+var secureServer = https.createServer(options, app);
+
+//Configure the secure to listen on port number secure port which is set above
+secureServer.listen(app.get('secPort'), () => {
+    console.log('Secure server listening on port ', app.get('secPort'));
+});
+
+//Pass the errors in secure server ti onError function below
+secureServer.on('error', onError);
+secureServer.on('listening', onListening);
 
 /**
  * Normalize a port into a number, string, or false.
