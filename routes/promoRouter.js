@@ -4,6 +4,7 @@
 const express = require('express');
 const bodyParser  = require('body-parser');
 const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 //Import promotions model and store it in a variable
 const Promotions = require('../models/promotions');
@@ -17,7 +18,10 @@ promoRouter.use(bodyParser.json());
 //The endpoint is just / since this router will be mounted as /promotions in index.js
 
 promoRouter.route('/')
-    .get((req, res, next) => {
+    .options(cors.corsWithOptions, (req, res) => {
+        res.statusCode = 200;
+    })
+    .get(cors.cors, (req, res, next) => {
         Promotions.find()
             .then((promotions) => {
                 res.statusCode = 200;
@@ -28,7 +32,7 @@ promoRouter.route('/')
 
             .catch((err) => next(err));
     })
-    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Promotions.create(req.body)
             .then((promotion) => {
                 console.log('Promotion created \n', promotion);
@@ -39,11 +43,11 @@ promoRouter.route('/')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         res.statusCode = 403
         res.end('PUT operation forbidden on /promotions');
     })
-    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Promotions.remove()
             .then((response) => {
                 res.statusCode = 200;
@@ -57,7 +61,10 @@ promoRouter.route('/')
 
 //ROUTE FOR /promotions/:promoId
 promoRouter.route('/:promoId')
-    .get((req, res, next) => {
+    .options(cors.corsWithOptions, (req, res) => {
+        res.statusCode = 200;
+    })
+    .get(cors.cors, (req, res, next) => {
         Promotions.findById(req.params.promoId)
             .then((promotion) => {
                 res.statusCode = 200;
@@ -67,11 +74,11 @@ promoRouter.route('/:promoId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         res.statusCode = 403
         res.end('POST operation forbidden on /promotions/' + req.params.promoId);
     })
-    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Promotions.findByIdAndUpdate(req.params.promoId, { $set : req.body }, { new : true })
             .then((promotion) => {
                 res.statusCode = 200;
@@ -81,7 +88,7 @@ promoRouter.route('/:promoId')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Promotions.findByIdAndRemove(req.params.promoId)
             .then((response) => {
                 res.statusCode = 200;

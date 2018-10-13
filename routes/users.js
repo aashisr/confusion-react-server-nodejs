@@ -3,12 +3,13 @@ const bodyParser = require('body-parser');
 var Users = require('../models/users');
 var passport = require('passport');
 var authenticate = require('../authenticate');
+const cors = require('./cors');
 
 var userRouter = express.Router();
 userRouter.use(bodyParser.json());
 
 /* GET users listing. */
-userRouter.get('/', authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+userRouter.get('/', cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     //Get all the users
     Users.find()
         .then((users) => {
@@ -19,7 +20,7 @@ userRouter.get('/', authenticate.verifyUser, authenticate.verifyAdmin, (req, res
         .catch((err) => next(err));
 });
 
-userRouter.post('/signup', (req, res, next) => {
+userRouter.post('/signup', cors.corsWithOptions, (req, res, next) => {
     console.log(req.body);
     //register is a mongoose method
     //First parameter is an instance of Users with submitted username,
@@ -66,7 +67,7 @@ userRouter.post('/signup', (req, res, next) => {
 //When the post request comes for login, first authenticate the user with passport
 //Next function will be called only if the authentication is successful
 //If error in authentication, passport automatically sends back the reply message
-userRouter.post('/login', passport.authenticate('local') , (req, res) => {
+userRouter.post('/login', cors.corsWithOptions, passport.authenticate('local') , (req, res) => {
     //Authenticate the user with local strategy first and issue a token to the user
 
     //Create a token with payload as id of the user
