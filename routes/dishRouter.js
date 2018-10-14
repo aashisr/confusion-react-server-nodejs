@@ -2,6 +2,7 @@
 //This is an mini express router, so we require all that was required in app.js
 const express = require('express');
 const bodyParser  = require('body-parser');
+//mongoose is used for mongoose methods like find, create, findById, etc
 const mongoose = require('mongoose');
 const authenticate = require('../authenticate');
 const cors = require('./cors');
@@ -158,7 +159,7 @@ dishRouter.route('/:dishId/comments')
             .catch((err) => next(err));
     })
     //POST request for dish comments
-    .post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
         //Find the dish to post the comments to with the given id
         Dishes.findById(req.params.dishId)
             .then((dish) => {
@@ -174,8 +175,9 @@ dishRouter.route('/:dishId/comments')
                     //Save the dish
                     dish.save(dish)
                         .then((dish) => {
-                            //Populate author's information to the comments in dish
+                            //Find the saved dish by id
                             Dishes.findById(dish._id)
+                            //Populate author's information to the comments in dish, might not be necessary here
                                 .populate('comments.author')
                                 .then((dish) => {
                                     res.statusCode = 200;
@@ -289,7 +291,6 @@ dishRouter.route('/:dishId/comments/:commentId')
 
                     //Check if the user editing is the author of this comment
                     if ((req.user._id).equals(dish.comments.id(req.params.commentId).author)) {
-                        console.log('Yes author', dish.comments.id(req.params.commentId).author);
                         //Only the rating or the comment can be updated
                         if (req.body.rating) {
                             //If the request body has the rating property to update
@@ -347,6 +348,7 @@ dishRouter.route('/:dishId/comments/:commentId')
 
                     //Check if the user editing is the author of this comment
                     if ((req.user._id).equals(dish.comments.id(req.params.commentId).author)) {
+                        console.log('Dish.comments is ', dish.comments);
                         //Remove the comment with given id
                         dish.comments.id(req.params.commentId).remove();
 

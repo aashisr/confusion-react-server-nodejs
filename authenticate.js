@@ -24,7 +24,7 @@ passport.deserializeUser(Users.deserializeUser());
 exports.getToken = function (user) {
     // generate a signed json web token with the contents of user object and return it in the response
     //user is the payload for json web token and sends the user as jwt_payload
-    return jwt.sign(user, config.secretKey, {expiresIn: 3600});
+    return jwt.sign(user, config.secretKey, {expiresIn: 36000});
 };
 
 //Configure json web token based strategy for passport
