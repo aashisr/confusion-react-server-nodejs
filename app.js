@@ -19,6 +19,7 @@ var promoRouter = require('./routes/promoRouter');
 var leaderRouter = require('./routes/leaderRouter');
 var uploadRouter = require('./routes/uploadRouter');
 var favoriteRouter = require('./routes/favoriteRouter');
+var commentRouter = require('./routes/commentRouter');
 
 //Mongoose helps to impose a structure on the documents that is going to be stored in the database collection
 const mongoose = require('mongoose');
@@ -30,13 +31,17 @@ const url = config.mongoUrl;
 
 //Establish a connection with the database and store in connect variable
 //Since current URL string parser is deprecated, new URL parser is being used
-const connect = mongoose.connect(url, {useNewUrlParser: true});
+const connect = mongoose.connect(url, { useNewUrlParser: true });
 
 //Now, connect the database and do database operations
-connect.then((db) => {
-    console.log('Connected to the server');
-
-}, (err) => {console.log(err)}); //Console log the error
+connect.then(
+    (db) => {
+        console.log('Connected to the server');
+    },
+    (err) => {
+        console.log(err);
+    }
+); //Console log the error
 
 var app = express();
 
@@ -45,7 +50,7 @@ var app = express();
 app.all('*', (req, res, next) => {
     //If incoming request is already a secure request
     //If incoming request is secure, req object will have the secure property set to true
-    if (req.secure){
+    if (req.secure) {
         //No need to do anything
         return next();
     } else {
@@ -82,21 +87,22 @@ app.use('/promotions', promoRouter);
 app.use('/leaders', leaderRouter);
 app.use('/imageUpload', uploadRouter);
 app.use('/favorites', favoriteRouter);
+app.use('/comments', commentRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  next(createError(404));
+    next(createError(404));
 });
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+    // set locals, only providing error in development
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+    // render the error page
+    res.status(err.status || 500);
+    res.render('error');
 });
 
 module.exports = app;
