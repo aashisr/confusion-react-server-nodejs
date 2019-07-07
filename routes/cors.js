@@ -3,7 +3,7 @@ const cors = require('cors');
 const app = express();
 
 //Whiltelist is all the origins server is willing to accept
-const whitelist = ['http://localhost:3000', 'https://localhost:3443'];
+const whitelist = ['http://localhost:3000', 'https://localhost:3443', 'http://localhost:3001'];
 
 //Configure cors options in a function
 var corsOptionsDelegate = (req, callback) => {
@@ -11,7 +11,7 @@ var corsOptionsDelegate = (req, callback) => {
 
     //If the incoming request header does not contain origin field in the whitelist
     //Origin configures the Access-Control-Allow-Origin CORS header
-    if (whitelist.indexOf(req.header('Origin')) !== -1){
+    if (whitelist.indexOf(req.header('Origin')) !== -1) {
         //If the incoming request belongs to one of the while listed origin, enable the requested origin in CORS request
         corsOptions = { origin: true };
     }
