@@ -41,6 +41,7 @@ commentRouter
     })
     //POST request for dish comments
     .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
+        console.log('Post comment');
         // Check if req containes the data (comment) required
         if (req.body) {
             // insert author to the body as the id of the logged in user
@@ -50,7 +51,7 @@ commentRouter
             Comments.create(req.body)
                 .then(
                     (comment) => {
-                        Comments.finOneById(comment._id) // id of the comment just inserted
+                        Comments.findById(comment._id) // id of the comment just inserted
                             .populate(author)
                             .then((comment) => {
                                 res.statusCode = 200;
